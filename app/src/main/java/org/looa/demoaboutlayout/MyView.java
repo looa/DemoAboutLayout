@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -50,5 +51,21 @@ public class MyView extends LinearLayout {
 
         addView(tv1, params1);
         addView(tv2, params2);
+    }
+
+    public void hide(int position) {
+        View v = position == 0 ? tv1 : tv2;
+        if (v.getParent() == null) return;
+        detachViewFromParent(v);
+        invalidate();
+        requestLayout();
+    }
+
+    public void show(int position) {
+        View v = position == 0 ? tv1 : tv2;
+        if (v.getParent() != null) return;
+        attachViewToParent(v, 0, v.getLayoutParams());
+        invalidate();
+        requestLayout();
     }
 }
