@@ -11,7 +11,6 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 
 /**
@@ -38,14 +37,12 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     private int height;//myView 的高度
     private boolean isFinishAnim = true;
 
-    //view 的大小，根据adapter动态设置
-    private int size = 0;
-    //当前位置
-    private int position = 0;
+    private StickyPageBaseAdapter adapter;
+    private int size = 0;//item的数量，根据adapter动态设置
+    private int position = 0;//当前位置，可以自动计算
 
-    //触发翻页事件的最小滑动距离
-    private int offSet = 0;
     private Interpolator interpolator = new DecelerateInterpolator();
+    private long time = 300;
 
     public StickyPageView(Context context) {
         this(context, null);
@@ -94,12 +91,66 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
         springViewA.setOnRefreshListener(this);
         springViewB.setOnRefreshListener(this);
+
+        springViewA.removeAllViews();
+        springViewB.removeAllViews();
     }
 
-    public void setOffSet(int offSet) {
-        this.offSet = offSet;
+    /**
+     * 设置当前位置，只能在控件非动画期间调用
+     *
+     * @param position
+     */
+    public void setCurPosition(int position) {
+        if (!isFinishAnim) return;
+        this.position = position;
+        if (adapter != null) {
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), this, position);
+        }
     }
 
+    /**
+     * 设置adapter，必要的
+     *
+     * @param adapter StickyPageBaseAdapter的实现类
+     */
+    public void setAdapter(StickyPageBaseAdapter adapter) {
+        this.adapter = adapter;
+        ViewHolder holderA = adapter.onCreateView(this);
+        ViewHolder holderB = adapter.onCreateView(this);
+        springViewA.addView(holderA.itemView);
+        springViewB.addView(holderB.itemView);
+        pageA.setTag(holderA);
+        pageB.setTag(holderB);
+        this.size = adapter.getCount();
+    }
+
+    /**
+     * 设置翻页的动画时长
+     *
+     * @param time 300ms default
+     */
+    public void setTime(long time) {
+        this.time = time;
+    }
+
+    /**
+     * 设置触发翻页事件的最小距离
+     *
+     * @param offSet 偏移量
+     */
+    public void setLimitHeight(@Px int offSet) {
+        headerA.setLimitHeight(offSet);
+        footerA.setLimitHeight(offSet);
+        headerB.setLimitHeight(offSet);
+        footerB.setLimitHeight(offSet);
+    }
+
+    /**
+     * 设置翻页滑动的插值器
+     *
+     * @param interpolator DecelerateInterpolator
+     */
     public void setInterpolator(Interpolator interpolator) {
         this.interpolator = interpolator;
     }
@@ -123,16 +174,10 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     @Override
     public void onRefresh(View view) {
-        if (view instanceof SpringView) {
-//            ((SpringView) view).onFinishFreshAndLoad();
-        }
     }
 
     @Override
     public void onLoadMore(View view) {
-        if (view instanceof SpringView) {
-//            ((SpringView) view).onFinishFreshAndLoad();
-        }
     }
 
 
@@ -153,17 +198,19 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     }
 
     public void moveDown() {
-        if (position + 1 >= size) return;
-        position++;
-        fill(Position.DOWN);
-        move(true);
+        if (position + 1 < size) {
+            position++;
+            fill(Position.DOWN);
+            move(true);
+        }
     }
 
     public void moveUp() {
-        if (position - 1 < 0) return;
-        position--;
-        fill(Position.UP);
-        move(false);
+        if (position - 1 >= 0) {
+            position--;
+            fill(Position.UP);
+            move(false);
+        }
     }
 
     private void move(boolean isNext) {
@@ -171,18 +218,23 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         View movePage;
         if (isNext) movePage = getPageFill();
         else movePage = getPageFree();
+
+        if (adapter != null) {
+            adapter.onChangePosition((ViewHolder) movePage.getTag(), this, position);
+        }
+
         LayoutParams params = (LayoutParams) movePage.getLayoutParams();
         LayoutParamsWarpper warpper = new LayoutParamsWarpper(movePage);
         int topMargin = params.topMargin;
         if (topMargin == 0 && isNext) {
             ObjectAnimator animator = ObjectAnimator.ofInt(warpper, "marginTop", 0, -height);
-            animator.setDuration(300);
+            animator.setDuration(time);
             animator.setInterpolator(interpolator);
             animator.addListener(this);
             animator.start();
         } else if (topMargin != 0 && !isNext) {
             ObjectAnimator animator = ObjectAnimator.ofInt(warpper, "marginTop", -height, 0);
-            animator.setDuration(300);
+            animator.setDuration(time);
             animator.setInterpolator(interpolator);
             animator.addListener(this);
             animator.start();
@@ -230,14 +282,10 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
      */
     private void fill(Position position) {
         View pageFree = getPageFree();
-        //TODO test code
-        pageFree.setBackgroundColor(Color.parseColor("#444444"));
         if (pageFree.getParent() != null) return;
         LayoutParams params = (LayoutParams) pageFree.getLayoutParams();
         @Px int marginTop = position == Position.DOWN ? 0 : -height;
         params.topMargin = marginTop;
-        TextView view = (TextView) pageFree.findViewById(R.id.tv_content);
-        view.setText("Page " + this.position);
         attachViewToParent(pageFree, position == Position.DOWN ? -1 : 0, params);
         invalidate();
         requestLayout();

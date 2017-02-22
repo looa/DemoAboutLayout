@@ -1,5 +1,6 @@
 package org.looa.demoaboutlayout;
 
+import android.support.annotation.Px;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,8 @@ import android.view.ViewGroup;
 public class StickyHeaderFooterView extends BaseHeader {
 
     private OnReachLimitListener listener;
+
+    private int limitHeight;
 
     public final static int HEADER = 1;
     public final static int FOOTER = 2;
@@ -32,16 +35,23 @@ public class StickyHeaderFooterView extends BaseHeader {
     @Override
     public View getView(LayoutInflater inflater, ViewGroup viewGroup) {
         View view;
-        if (type == HEADER) view = inflater.inflate(R.layout.sticky_paging_header, viewGroup, true);
-        else if (type == FOOTER)
+        if (type == HEADER) {
+            view = inflater.inflate(R.layout.sticky_paging_header, viewGroup, true);
+        } else if (type == FOOTER) {
             view = inflater.inflate(R.layout.sticky_paging_footer, viewGroup, true);
-        else
+        } else {
             view = inflater.inflate(type, viewGroup, true);
+        }
+        limitHeight = (int) view.getResources().getDimension(R.dimen.header_height);
         return view;
     }
 
     public void setOnReachLimitListener(OnReachLimitListener listener) {
         this.listener = listener;
+    }
+
+    public void setLimitHeight(@Px int limitHeight) {
+        this.limitHeight = limitHeight;
     }
 
     @Override
@@ -72,7 +82,7 @@ public class StickyHeaderFooterView extends BaseHeader {
 
     @Override
     public int getDragLimitHeight(View rootView) {
-        return (int) rootView.getResources().getDimension(R.dimen.header_height);
+        return limitHeight;
     }
 
     @Override
