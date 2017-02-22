@@ -11,9 +11,12 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 
 
 /**
+ * 粘性翻页view
+ * <p>
  * Created by ranxiangwei on 2017/2/21.
  */
 
@@ -74,26 +77,18 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         springViewA = (SpringView) pageA.findViewById(R.id.sv_info);
         springViewB = (SpringView) pageB.findViewById(R.id.sv_info);
 
-        headerA = new StickyHeaderFooterView(StickyHeaderFooterView.HEADER);
-        footerA = new StickyHeaderFooterView(StickyHeaderFooterView.FOOTER);
-        headerB = new StickyHeaderFooterView(StickyHeaderFooterView.HEADER);
-        footerB = new StickyHeaderFooterView(StickyHeaderFooterView.FOOTER);
+        headerA = new StickyHeaderFooterView(R.layout.sticky_paging_empty);
+        footerA = new StickyHeaderFooterView(R.layout.sticky_paging_empty);
+        headerB = new StickyHeaderFooterView(R.layout.sticky_paging_empty);
+        footerB = new StickyHeaderFooterView(R.layout.sticky_paging_empty);
 
         headerA.setOnReachLimitListener(this);
         footerA.setOnReachLimitListener(this);
         headerB.setOnReachLimitListener(this);
         footerB.setOnReachLimitListener(this);
 
-        springViewA.setHeader(headerA);
-        springViewA.setFooter(footerA);
-        springViewB.setHeader(headerB);
-        springViewB.setFooter(footerB);
-
         springViewA.setOnRefreshListener(this);
         springViewB.setOnRefreshListener(this);
-
-        springViewA.removeAllViews();
-        springViewB.removeAllViews();
     }
 
     /**
@@ -115,14 +110,28 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
      * @param adapter StickyPageBaseAdapter的实现类
      */
     public void setAdapter(StickyPageBaseAdapter adapter) {
+        if (adapter == null) return;
         this.adapter = adapter;
+        ((ScrollView) springViewA.getChildAt(0)).removeAllViews();
+        ((ScrollView) springViewB.getChildAt(0)).removeAllViews();
         ViewHolder holderA = adapter.onCreateView(this);
         ViewHolder holderB = adapter.onCreateView(this);
-        springViewA.addView(holderA.itemView);
-        springViewB.addView(holderB.itemView);
+        ((ScrollView) springViewA.getChildAt(0)).setFillViewport(true);
+        ((ScrollView) springViewB.getChildAt(0)).setFillViewport(true);
+        ((ScrollView) springViewA.getChildAt(0)).addView(holderA.itemView);
+        ((ScrollView) springViewB.getChildAt(0)).addView(holderB.itemView);
         pageA.setTag(holderA);
         pageB.setTag(holderB);
         this.size = adapter.getCount();
+        this.position = 0;
+        if (size > 0) {
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), this, 0);
+        }
+
+        springViewA.setHeader(headerA);
+        springViewA.setFooter(footerA);
+        springViewB.setHeader(headerB);
+        springViewB.setFooter(footerB);
     }
 
     /**
@@ -192,6 +201,9 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         } else if (o == footerB) {
             moveDown();
         }
+        if (adapter != null) {
+            adapter.onChangePosition((ViewHolder) getPageFree().getTag(), this, position);
+        }
         if (o instanceof SpringView) {
             ((SpringView) o).onFinishFreshAndLoad();
         }
@@ -218,10 +230,6 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         View movePage;
         if (isNext) movePage = getPageFill();
         else movePage = getPageFree();
-
-        if (adapter != null) {
-            adapter.onChangePosition((ViewHolder) movePage.getTag(), this, position);
-        }
 
         LayoutParams params = (LayoutParams) movePage.getLayoutParams();
         LayoutParamsWarpper warpper = new LayoutParamsWarpper(movePage);

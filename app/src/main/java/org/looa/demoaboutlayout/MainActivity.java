@@ -10,12 +10,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private StickyPageView myView;
     private Button button1, button2, button3, button4;
 
+    private TestAdapter adapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         myView = (StickyPageView) findViewById(R.id.my_view);
+
+        adapter = new TestAdapter(this);
+        myView.setAdapter(adapter);
 
         button1 = (Button) findViewById(R.id.button1);
         button2 = (Button) findViewById(R.id.button2);
