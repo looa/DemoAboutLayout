@@ -7,7 +7,7 @@ import android.widget.Button;
 
 public class MainActivity extends Activity implements View.OnClickListener {
 
-    private MyView myView;
+    private StickyPageView myView;
     private Button button1, button2, button3, button4;
 
     @Override
@@ -15,7 +15,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        myView = (MyView) findViewById(R.id.my_view);
+        myView = (StickyPageView) findViewById(R.id.my_view);
 
         button1 = (Button) findViewById(R.id.button1);
         button2 = (Button) findViewById(R.id.button2);
@@ -31,16 +31,12 @@ public class MainActivity extends Activity implements View.OnClickListener {
     @Override
     public void onClick(View v) {
         if (v == button1) {
-            myView.hide(0);
         }
         if (v == button2) {
-            myView.hide(1);
         }
         if (v == button3) {
-            myView.show(0);
         }
         if (v == button4) {
-            myView.show(1);
         }
     }
 }

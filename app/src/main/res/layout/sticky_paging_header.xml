@@ -10,7 +10,7 @@
         android:layout_height="32dp"
         android:layout_centerHorizontal="true"
         android:scaleType="centerInside"
-        android:src="@drawable/icon_pull" />
+        android:src="@mipmap/ic_launcher" />
 
     <TextView
         android:layout_width="wrap_content"

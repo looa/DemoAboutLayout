@@ -4,7 +4,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.liaoinstan.springview.container.BaseHeader;
 
 /**
  * 上拉或者下拉头
@@ -61,7 +60,9 @@ public class StickyHeaderFooterView extends BaseHeader {
 
     @Override
     public void onStartAnim() {
-        if (listener != null) listener.onReached();
+        if (listener != null) {
+            listener.onReached(this);
+        }
     }
 
     @Override

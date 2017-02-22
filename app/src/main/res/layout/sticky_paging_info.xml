@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.liaoinstan.springview.widget.SpringView xmlns:android="http://schemas.android.com/apk/res/android"
+<org.looa.demoaboutlayout.SpringView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/sv_info"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorPrimary">
+    android:background="@android:color/white">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -17,9 +17,10 @@
             <TextView
                 android:id="@+id/tv_content"
                 android:layout_width="match_parent"
-                android:layout_height="300dp"
+                android:layout_height="700dp"
+                android:background="@android:color/white"
                 android:gravity="center"
-                android:text="Page A" />
+                android:text="Page 0" />
         </RelativeLayout>
     </ScrollView>
-</com.liaoinstan.springview.widget.SpringView>
+</org.looa.demoaboutlayout.SpringView>

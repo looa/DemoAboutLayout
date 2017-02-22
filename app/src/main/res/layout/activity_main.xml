@@ -7,13 +7,11 @@
     android:background="@android:color/darker_gray"
     tools:context="org.looa.demoaboutlayout.MainActivity">
 
-    <org.looa.demoaboutlayout.MyView
+    <org.looa.demoaboutlayout.StickyPageView
         android:id="@+id/my_view"
         android:layout_width="match_parent"
         android:layout_height="600dp"
-        android:background="@color/colorAccent"
-        android:clipChildren="false"
-        android:clipToPadding="false" />
+        android:background="@color/colorAccent" />
 
     <Button
         android:id="@+id/button1"

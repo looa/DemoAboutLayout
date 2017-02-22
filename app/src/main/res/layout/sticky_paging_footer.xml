@@ -20,5 +20,5 @@
         android:layout_below="@id/tv_footer_content"
         android:layout_centerHorizontal="true"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_launcher" />
+        android:src="@mipmap/ic_launcher" />
 </RelativeLayout>

@@ -5,5 +5,5 @@ package org.looa.demoaboutlayout;
  */
 
 public interface OnReachLimitListener {
-    void onReached();
+    void onReached(Object o);
 }
