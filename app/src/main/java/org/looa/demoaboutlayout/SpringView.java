@@ -988,6 +988,12 @@ public class SpringView extends ViewGroup {
         }
     }
 
+    @Override
+    public void addView(View child) {
+        super.addView(child);
+        onFinishInflate();
+    }
+
     public void setMoveTime(int time) {
         this.MOVE_TIME = time;
     }

@@ -3,14 +3,17 @@ package org.looa.demoaboutlayout;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.graphics.Color;
 import android.support.annotation.Px;
+import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.webkit.WebView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ScrollView;
 
 
@@ -37,7 +40,11 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     private View pageFree;//游离态页面（游离态页面在装填结束前都是游离态）
     private View pageFill;//已装填页面（已装填页面的marginTop一直处于0的状态）
 
+    private ViewHolder holderA;
+    private ViewHolder holderB;
+
     private int height;//myView 的高度
+    private int width;
     private boolean isFinishAnim = true;
 
     private StickyPageBaseAdapter adapter;
@@ -100,7 +107,7 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         if (!isFinishAnim) return;
         this.position = position;
         if (adapter != null) {
-            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), this, position);
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), position, true);
         }
     }
 
@@ -112,20 +119,31 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     public void setAdapter(StickyPageBaseAdapter adapter) {
         if (adapter == null) return;
         this.adapter = adapter;
-        ((ScrollView) springViewA.getChildAt(0)).removeAllViews();
-        ((ScrollView) springViewB.getChildAt(0)).removeAllViews();
-        ViewHolder holderA = adapter.onCreateView(this);
-        ViewHolder holderB = adapter.onCreateView(this);
-        ((ScrollView) springViewA.getChildAt(0)).setFillViewport(true);
-        ((ScrollView) springViewB.getChildAt(0)).setFillViewport(true);
-        ((ScrollView) springViewA.getChildAt(0)).addView(holderA.itemView);
-        ((ScrollView) springViewB.getChildAt(0)).addView(holderB.itemView);
+        holderA = adapter.onCreateView(this);
+        holderB = adapter.onCreateView(this);
+        if (holderA.itemView instanceof RecyclerView ||
+                holderA.itemView instanceof WebView ||
+                holderA.itemView instanceof ScrollView ||
+                holderA.itemView instanceof ListView) {
+            springViewA.removeAllViews();
+            springViewB.removeAllViews();
+            springViewA.addView(holderA.itemView);
+            springViewB.addView(holderB.itemView);
+        } else {
+            ((ScrollView) springViewA.getChildAt(0)).removeAllViews();
+            ((ScrollView) springViewB.getChildAt(0)).removeAllViews();
+            ((ScrollView) springViewA.getChildAt(0)).setFillViewport(true);
+            ((ScrollView) springViewB.getChildAt(0)).setFillViewport(true);
+            ((ScrollView) springViewA.getChildAt(0)).addView(holderA.itemView);
+            ((ScrollView) springViewB.getChildAt(0)).addView(holderB.itemView);
+            Log.i(holderA.itemView.getClass().getName(), "((ScrollView) springViewA.getChildAt(0)).removeAllViews();");
+        }
         pageA.setTag(holderA);
         pageB.setTag(holderB);
         this.size = adapter.getCount();
         this.position = 0;
         if (size > 0) {
-            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), this, 0);
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), 0, true);
         }
 
         springViewA.setHeader(headerA);
@@ -192,17 +210,22 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     @Override
     public void onReached(Object o) {
+        boolean isNext = true;
         if (o == headerA) {
             moveUp();
+            isNext = false;
         } else if (o == footerA) {
             moveDown();
+            isNext = true;
         } else if (o == headerB) {
             moveUp();
+            isNext = false;
         } else if (o == footerB) {
             moveDown();
+            isNext = true;
         }
         if (adapter != null) {
-            adapter.onChangePosition((ViewHolder) getPageFree().getTag(), this, position);
+            adapter.onChangePosition((ViewHolder) getPageFree().getTag(), position, isNext);
         }
         if (o instanceof SpringView) {
             ((SpringView) o).onFinishFreshAndLoad();
@@ -273,8 +296,13 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if ((height = getHeight()) != 0) {
+            width = getWidth();
             pageA.getLayoutParams().height = height;
             pageB.getLayoutParams().height = height;
+            if (holderA != null) {
+                holderA.itemView.getLayoutParams().width = width;
+                holderB.itemView.getLayoutParams().width = width;
+            }
         }
     }
 
@@ -316,7 +344,6 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
         requestLayout();
         setPageFill(pageFree);
         setPageFree(pageFill);
-        getPageFill().setBackgroundColor(Color.WHITE);
     }
 
     /**

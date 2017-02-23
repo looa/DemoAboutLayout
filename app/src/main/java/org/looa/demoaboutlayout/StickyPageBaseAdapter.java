@@ -19,10 +19,10 @@ public abstract class StickyPageBaseAdapter<T> {
      * 当翻页的时候，会调用改方法
      *
      * @param viewHolder
-     * @param parent
      * @param position
+     * @param isNext
      */
-    public abstract void onChangePosition(StickyPageView.ViewHolder viewHolder, ViewGroup parent, int position);
+    public abstract void onChangePosition(StickyPageView.ViewHolder viewHolder, int position, boolean isNext);
 
     protected int getCount() {
         return 0;
