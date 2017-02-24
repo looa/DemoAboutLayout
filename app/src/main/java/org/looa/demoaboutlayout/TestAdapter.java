@@ -5,7 +5,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,14 +23,14 @@ public class TestAdapter extends StickyPageBaseAdapter {
     }
 
     @Override
-    public StickyPageView.ViewHolder onCreateView(ViewGroup parent) {
+    public StickyPageView.ViewHolder onCreateView(StickyPageView parent) {
         LayoutInflater inflater = LayoutInflater.from(context);
         View view = inflater.inflate(R.layout.sticky_content_recycler, null);
         return new Holder(view);
     }
 
     @Override
-    public void onChangePosition(StickyPageView.ViewHolder viewHolder, int position, boolean isNext) {
+    public void onChangePosition(StickyPageView.ViewHolder viewHolder, int position, boolean isNext, boolean isMove) {
         if (viewHolder instanceof Holder) {
             ((Holder) viewHolder).setData(position);
             ((RecyclerView) viewHolder.itemView).scrollToPosition(isNext ? 0 : ((Holder) viewHolder).data.size() - 1);

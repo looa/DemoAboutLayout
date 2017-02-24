@@ -6,7 +6,6 @@ import android.content.Context;
 import android.support.annotation.Px;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -53,6 +52,21 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     private Interpolator interpolator = new DecelerateInterpolator();
     private long time = 300;
+    private boolean isNext;
+
+    private ObjectAnimator animator;
+    // 设定一个强引用warpper，会导致实例出来的对象一直被持有，直到主动释放
+    // 在move()方法执行结束后，实例化的对象会失去强引用，只保留ObjectAnimator内部的一个弱引用
+    // 弱引用可能在动画执行时被回收，导致动画中断
+    // 所以目前的设定已经不会触发回收机制了,但是保留回收机制代码，用作参考
+    private LayoutParamsWarpper warpper;
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // 记录animator是否自动cancel，如果自动cancel了要重启动画，并且规避end里面的正常操作
+    private boolean isAutoCancel = false;
+    private int animRebootCount = 0;//累计重启的次数
+    private int REBOOT_MAX = 3;//最大重启的次数（防止极端情况下的大量重启，虽然基本不会发生这种情况，但是保护一下比较好）
+    ///////////////////////////////////////////////////////////////////////////////
 
     public StickyPageView(Context context) {
         this(context, null);
@@ -106,9 +120,7 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
     public void setCurPosition(int position) {
         if (!isFinishAnim) return;
         this.position = position;
-        if (adapter != null) {
-            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), position, true);
-        }
+        adapter.onChangePosition((ViewHolder) getPageFill().getTag(), position, true, false);
     }
 
     /**
@@ -136,20 +148,27 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
             ((ScrollView) springViewB.getChildAt(0)).setFillViewport(true);
             ((ScrollView) springViewA.getChildAt(0)).addView(holderA.itemView);
             ((ScrollView) springViewB.getChildAt(0)).addView(holderB.itemView);
-            Log.i(holderA.itemView.getClass().getName(), "((ScrollView) springViewA.getChildAt(0)).removeAllViews();");
         }
         pageA.setTag(holderA);
         pageB.setTag(holderB);
         this.size = adapter.getCount();
         this.position = 0;
         if (size > 0) {
-            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), 0, true);
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), 0, true, false);
         }
 
         springViewA.setHeader(headerA);
         springViewA.setFooter(footerA);
         springViewB.setHeader(headerB);
         springViewB.setFooter(footerB);
+    }
+
+    public void refreshAdapter() {
+        this.size = adapter.getCount();
+        this.position = 0;
+        if (size > 0) {
+            adapter.onChangePosition((ViewHolder) getPageFill().getTag(), 0, true, false);
+        }
     }
 
     /**
@@ -210,22 +229,14 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     @Override
     public void onReached(Object o) {
-        boolean isNext = true;
         if (o == headerA) {
             moveUp();
-            isNext = false;
         } else if (o == footerA) {
             moveDown();
-            isNext = true;
         } else if (o == headerB) {
             moveUp();
-            isNext = false;
         } else if (o == footerB) {
             moveDown();
-            isNext = true;
-        }
-        if (adapter != null) {
-            adapter.onChangePosition((ViewHolder) getPageFree().getTag(), position, isNext);
         }
         if (o instanceof SpringView) {
             ((SpringView) o).onFinishFreshAndLoad();
@@ -250,26 +261,22 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     private void move(boolean isNext) {
         if (!isFinishAnim) return;
-        View movePage;
-        if (isNext) movePage = getPageFill();
-        else movePage = getPageFree();
+        this.isNext = isNext;
+        adapter.onChangePosition((ViewHolder) getPageFree().getTag(), position, isNext, true);
+        move();
+    }
 
-        LayoutParams params = (LayoutParams) movePage.getLayoutParams();
-        LayoutParamsWarpper warpper = new LayoutParamsWarpper(movePage);
-        int topMargin = params.topMargin;
-        if (topMargin == 0 && isNext) {
-            ObjectAnimator animator = ObjectAnimator.ofInt(warpper, "marginTop", 0, -height);
-            animator.setDuration(time);
-            animator.setInterpolator(interpolator);
-            animator.addListener(this);
-            animator.start();
-        } else if (topMargin != 0 && !isNext) {
-            ObjectAnimator animator = ObjectAnimator.ofInt(warpper, "marginTop", -height, 0);
-            animator.setDuration(time);
-            animator.setInterpolator(interpolator);
-            animator.addListener(this);
-            animator.start();
+    private void move() {
+        if (warpper == null) {
+            View movePage = isNext ? getPageFill() : getPageFree();
+            warpper = new LayoutParamsWarpper(movePage);
         }
+        int offset = warpper.params.topMargin;
+        animator = ObjectAnimator.ofInt(warpper, "marginTop", offset, isNext ? -height : 0);
+        animator.setDuration(time);
+        animator.setInterpolator(interpolator);
+        animator.addListener(this);
+        animator.start();
     }
 
     @Override
@@ -279,12 +286,22 @@ public class StickyPageView extends LinearLayout implements SpringView.OnRefresh
 
     @Override
     public void onAnimationEnd(Animator animation) {
-        isFinishAnim = true;
-        clear();
+        if (isAutoCancel && animRebootCount < REBOOT_MAX) {
+            move();//重启动画
+            animRebootCount++;
+        } else {
+            clear();
+            isFinishAnim = true;
+            animRebootCount = 0;//动画成功之后，重启次数归零
+            warpper = null;
+        }
+        isAutoCancel = false;//动画结束的时候重置该值
     }
 
+    //检测到意外cancel之后，应该拦截end里面的操作（加个标记位，然后重启动画。都是弱引用惹的祸）
     @Override
     public void onAnimationCancel(Animator animation) {
+        isAutoCancel = true;
     }
 
     @Override
